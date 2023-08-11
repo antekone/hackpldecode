@@ -8,6 +8,7 @@ import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.Charset
+import java.nio.file.Path
 import kotlin.math.min
 import kotlin.system.exitProcess
 
@@ -711,6 +712,9 @@ class Extractor : Runnable {
     )
     var extract: String? = null
 
+    @CommandLine.Option(names=["-f", "--force"], description=["Overwrite files if needed"])
+    var force: Boolean = false
+
     override fun run() {
         val unpack = unpack
         val extract = extract
@@ -770,6 +774,13 @@ class Extractor : Runnable {
         if (unpack != null) {
             val mz = newMZ.render()
             println("- Unpacked: ${filename.length()} bytes -> ${mz.size} bytes")
+
+            if (!force) {
+                if (Path.of(unpack).toFile().exists()) {
+                    throw RuntimeException("file already exists, use `-f` to overwrite: $unpack")
+                }
+            }
+
             File(unpack).writeBytes(mz)
             println("  Written to: $unpack")
         }
@@ -780,6 +791,13 @@ class Extractor : Runnable {
             }
 
             var size = 0L
+
+            if (!force) {
+                if (Path.of(extract).toFile().exists()) {
+                    throw RuntimeException("file already exists, use `-f` to overwrite: $extract")
+                }
+            }
+
             FileOutputStream(File(extract)).use { out ->
                 for (i in blobs.indices) {
                     val decrypted = hackpl.decryptBlob(
